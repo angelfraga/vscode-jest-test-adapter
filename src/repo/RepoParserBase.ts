@@ -5,6 +5,7 @@ import util from "util";
 import vscode from "vscode";
 import { Log } from "vscode-test-adapter-util";
 import { RepoParser } from ".";
+import { JestExecutionParams } from "./types";
 
 // the following requires Node 8 minimum.
 export const readFile = util.promisify(fs.readFile);
@@ -16,11 +17,11 @@ export default class RepoParserBase implements Pick<RepoParser, "projectChange">
     this.projectChangedEmitter = new vscode.EventEmitter<any>();
   }
 
-  public get projectChange() {
+  public get projectChange(): vscode.Event<any> {
     return this.projectChangedEmitter.event;
   }
 
-  protected getJestCommandAndDirectory() {
+  protected getJestCommandAndDirectory(): JestExecutionParams {
     if (this.pathToJest === "jest") {
       // globally installed jest.
       return { jestCommand: "jest", jestExecutionDirectory: this.workspaceRoot };

@@ -1,9 +1,12 @@
-import vscode from "vscode";
+import { Event } from "vscode";
 
-export interface ProjectConfig {
-  jestConfig?: string;
+export interface JestExecutionParams {
   jestCommand: string;
   jestExecutionDirectory: string;
+}
+
+export interface ProjectConfig extends JestExecutionParams {
+  jestConfig?: string;
   projectName: string;
   rootPath: string;
   tsConfig?: string;
@@ -11,17 +14,17 @@ export interface ProjectConfig {
 
 export type ProjectChangeEvent =
   | {
-      type: "added";
-      config: ProjectConfig;
-    }
+    type: "added";
+    config: ProjectConfig;
+  }
   | {
-      type: "removed";
-      rootPath: string;
-    };
+    type: "removed";
+    rootPath: string;
+  };
 
 export interface RepoParser {
   type: string;
   isMatch: () => Promise<boolean>;
   getProjects: () => Promise<ProjectConfig[]>;
-  readonly projectChange: vscode.Event<ProjectChangeEvent>;
+  readonly projectChange: Event<ProjectChangeEvent>;
 }
