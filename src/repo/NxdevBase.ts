@@ -21,7 +21,7 @@ abstract class NxdevBase<T> extends RepoParserBase implements RepoParser {
 
   protected abstract configFilter: (entry: [string, T]) => boolean;
 
-  protected abstract configMap: (entry: [string, T]) => ProjectConfig;
+  protected abstract configMap: (entry: [string, T]) => ProjectConfig | undefined;
 
   private useExperimentalCli?: boolean;
 
@@ -33,11 +33,25 @@ abstract class NxdevBase<T> extends RepoParserBase implements RepoParser {
     await this.ensureUseExperimentalCliDetermined();
     const buffer = await readFile(path.resolve(this.workspaceRoot, this.configFileName));
     const angularConfig = JSON.parse(buffer.toString()) as { projects: { key: T } };
-    const angularProjects = Object.entries<T>(angularConfig.projects)
-      .filter(this.configFilter)
-      .map(entry => this.configMap(entry));
+    const angularProjects = await Promise.all(Object.entries<T>(angularConfig.projects)
+      .map(async ([key, value]) => {
+        if (typeof value === 'string') {
+          try {
+            const configPath = path.resolve(this.workspaceRoot, value, "project.json");
+            const projectBuffer = await readFile(configPath);
+            return [key, JSON.parse(projectBuffer.toString())] as [string, T];
+          } catch (e) {
+            console.log(e);
+          }
+        }
 
-    return angularProjects;
+        return [key, value] as [string, T];
+      }));
+
+    return angularProjects
+      .filter(this.configFilter)
+      .map(entry => this.configMap(entry))
+      .filter(Boolean) as ProjectConfig[];
   }
 
   public async isMatch() {

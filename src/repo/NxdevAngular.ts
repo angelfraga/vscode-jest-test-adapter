@@ -1,20 +1,34 @@
 import path from "path";
 import { Log } from "vscode-test-adapter-util";
 import { NxdevBase } from "./NxdevBase";
-import { RepoParser } from "./types";
+import { ProjectConfig, RepoParser } from "./types";
 
-interface NxAngular {
-  architect: {
-    test: {
-      builder: string;
-      options: {
-        jestConfig: string;
-        tsConfig?: string;
-        setupFile?: string;
-      };
+interface AngularConfig {
+  test: {
+    builder: string;
+    options: {
+      jestConfig: string;
+      tsConfig?: string;
+      setupFile?: string;
     };
   };
-}
+};
+
+interface ProjectsConfig {
+  test: {
+    executor: string;
+    options: {
+      jestConfig: string;
+      tsConfig?: string;
+      setupFile?: string;
+    };
+  };
+};
+
+interface NxAngular {
+  architect?: AngularConfig;
+  targets?: ProjectsConfig;
+};
 
 class NxdevAngular extends NxdevBase<NxAngular> implements RepoParser {
   public type = "Nx.dev Angular";
@@ -25,13 +39,19 @@ class NxdevAngular extends NxdevBase<NxAngular> implements RepoParser {
     super(workspaceRoot, log, pathToJest);
   }
 
-  protected configFilter = ([, projectConfig]: [string, NxAngular]) =>
-    projectConfig.architect &&
-    projectConfig.architect.test &&
-    projectConfig.architect.test.builder === "@nrwl/jest:jest";
+  protected configFilter = ([, projectConfig]: [string, NxAngular]): boolean => {
+    return (
+      projectConfig.architect?.test?.builder === "@nrwl/jest:jest" ||
+      projectConfig.targets?.test?.executor === "@nrwl/jest:jest"
+    );
+  }
 
-  protected configMap = ([projectName, projectConfig]: [string, NxAngular]) => {
-    const options = projectConfig.architect.test.options;
+  protected configMap = ([projectName, projectConfig]: [string, NxAngular]): ProjectConfig | undefined => {
+    const options = projectConfig.architect?.test.options ?? projectConfig.targets?.test.options;
+
+    if (!options) {
+      return undefined;
+    }
 
     return {
       ...this.getJestExecutionParameters(projectName),
